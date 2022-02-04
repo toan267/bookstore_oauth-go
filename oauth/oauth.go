@@ -32,9 +32,6 @@ type accessToken struct {
 	ClientId 	int64 `json:"client_id"`
 }
 
-type oauthInterface interface {
-}
-
 func IsPublic(request *http.Request) bool {
 	if request == nil {
 		return true
@@ -75,12 +72,17 @@ func AuthenticateRequest(request *http.Request) *errors.RestErr{
 	}
 	at, err := getAccessToken(accessTokenId)
 	if err != nil {
+		if err.Status == http.StatusNotFound {
+			return nil
+		}
 		return err
 	}
 	request.Header.Add(headerXCallerId, fmt.Sprintf("%v",at.UserId))
 	request.Header.Add(headerXClientId, fmt.Sprintf("%v",at.ClientId))
 	return nil
 }
+
+func NewMethodLocal() {}
 
 func cleanRequest(request *http.Request) {
 	if request == nil {
@@ -100,6 +102,9 @@ func getAccessToken(accessTokenId string) (*accessToken, *errors.RestErr) {
 		if err := json.Unmarshal(response.Bytes(), &restErr); err != nil {
 			return nil, errors.NewInternalServerError("invalid error interface when trying to get access token")
 		}
+		//if response.StatusCode == 404 {
+		//	return nil
+		//}
 		return nil, &restErr
 	}
 	var at accessToken
